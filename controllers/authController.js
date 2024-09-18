@@ -1,5 +1,8 @@
 const db = require("../db/dbconnection");
-const bcrypt = require('bcrypt');
+const bcrypt = require("bcrypt");
+var jwt = require("jsonwebtoken");
+const jwtKey = "task_manager";
+
 const signupController = async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -16,8 +19,8 @@ const signupController = async (req, res) => {
         .status(400)
         .json({ error: "Required field password is missing" });
     }
-        let saltRounds=10;
-        let hashpassword = await bcrypt.hash(password,saltRounds)
+    let saltRounds = 10;
+    let hashpassword = await bcrypt.hash(password, saltRounds);
     db.query(
       `SELECT * FROM users WHERE LOWER(email) = LOWER(?)`,
       [email],
@@ -55,7 +58,7 @@ const signupController = async (req, res) => {
   }
 };
 
-const loginController = (req, res) => {
+const loginController = async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email) {
@@ -65,15 +68,27 @@ const loginController = (req, res) => {
         .status(400)
         .json({ error: "Required field password is missing" });
     }
-    
+
     db.query(
-      `SELECT email FROM users WHERE LOWER(email) = LOWER(?)`,
+      `SELECT * FROM users WHERE LOWER(email) = LOWER(?)`,
       [email],
-      (err, result) => {
+      async (err, result) => {
+      
         if (result.length === 0) {
-          return res.status(404).json({ error: "User is Not Found" });
-        } else if (result) {
-          return res.status(200).json({ message: "User Login Successfully!" });
+          return res
+            .status(404)
+            .json({ error: "User is Not Found with this email!" });
+        }
+        let isPassWord = await bcrypt.compare(password, result[0].password);
+        if (!isPassWord) {
+          return res.status(404).json({ message: "Password is incorrect!" });
+        }
+        let token = jwt.sign({ user: result }, jwtKey, {
+            expiresIn: "1h",
+          });
+  
+        if (result) {
+          return res.status(200).json({token:token, message: "User Login Successfully!" });
         }
       }
     );
