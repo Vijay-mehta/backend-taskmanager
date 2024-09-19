@@ -5,7 +5,8 @@ const jwtKey = "task_manager";
 
 const signupController = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password,role } = req.body;
+    console.log("admin",role)
     const emailRegex = /^[a-zA-Z0-9._%+-]+@(gmail\.com|googlemail\.com)$/;
     let isEmailValid = emailRegex.test(email);
     if (!name) {
@@ -31,17 +32,22 @@ const signupController = async (req, res) => {
         if (result && result.length) {
           return res.status(409).json({ message: "user already exist" });
         }
-        db.query(
-          `INSERT INTO users (name,email,password) VALUES ('${name}','${email}','${hashpassword}')`,
-          (err, result) => {
+
+        const query = role
+          ? `INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)`
+          : `INSERT INTO users (name, email, password) VALUES (?, ?, ?)`;
+        
+        const values = role ? [name, email, hashpassword, role] : [name, email, hashpassword];
+        db.query(query,values,(err, result) => {
             if (err) {
               return res.status(404).json({ error: `${err}` });
             }
             if (result) {
               db.query(
-                `SELECT id,name,email FROM users WHERE LOWER(email)= LOWER(?)`,
+                `SELECT id,name,email,role FROM users WHERE LOWER(email)= LOWER(?)`,
                 [email],
                 (err, result) => {
+                    console.log("resulr333",result)
                   return res
                     .status(200)
                     .json({ result, message: "User Signup successfully!" });
