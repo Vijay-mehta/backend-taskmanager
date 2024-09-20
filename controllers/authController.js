@@ -5,8 +5,7 @@ const jwtKey = "task_manager";
 
 const signupController = async (req, res) => {
   try {
-    const { name, email, password,role } = req.body;
-    console.log("admin",role)
+    const { name, email, password, role } = req.body;
     const emailRegex = /^[a-zA-Z0-9._%+-]+@(gmail\.com|googlemail\.com)$/;
     let isEmailValid = emailRegex.test(email);
     if (!name) {
@@ -36,26 +35,27 @@ const signupController = async (req, res) => {
         const query = role
           ? `INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)`
           : `INSERT INTO users (name, email, password) VALUES (?, ?, ?)`;
-        
-        const values = role ? [name, email, hashpassword, role] : [name, email, hashpassword];
-        db.query(query,values,(err, result) => {
-            if (err) {
-              return res.status(404).json({ error: `${err}` });
-            }
-            if (result) {
-              db.query(
-                `SELECT id,name,email,role FROM users WHERE LOWER(email)= LOWER(?)`,
-                [email],
-                (err, result) => {
-                    console.log("resulr333",result)
-                  return res
-                    .status(200)
-                    .json({ result, message: "User Signup successfully!" });
-                }
-              );
-            }
+
+        const values = role
+          ? [name, email, hashpassword, role]
+          : [name, email, hashpassword];
+        db.query(query, values, (err, result) => {
+          if (err) {
+            return res.status(404).json({ error: `${err}` });
           }
-        );
+          if (result) {
+            db.query(
+              `SELECT id,name,email,role FROM users WHERE LOWER(email)= LOWER(?)`,
+              [email],
+              (err, result) => {
+                console.log("resulr333", result);
+                return res
+                  .status(200)
+                  .json({ result, message: "User Signup successfully!" });
+              }
+            );
+          }
+        });
       }
     );
   } catch (error) {
@@ -79,7 +79,6 @@ const loginController = async (req, res) => {
       `SELECT * FROM users WHERE LOWER(email) = LOWER(?)`,
       [email],
       async (err, result) => {
-      
         if (result.length === 0) {
           return res
             .status(404)
@@ -90,11 +89,13 @@ const loginController = async (req, res) => {
           return res.status(404).json({ message: "Password is incorrect!" });
         }
         let token = jwt.sign({ user: result }, jwtKey, {
-            expiresIn: "1h",
-          });
-  
+          expiresIn: "1h",
+        });
+
         if (result) {
-          return res.status(200).json({token:token, message: "User Login Successfully!" });
+          return res
+            .status(200)
+            .json({ token: token, message: "User Login Successfully!" });
         }
       }
     );
@@ -104,4 +105,87 @@ const loginController = async (req, res) => {
   }
 };
 
-module.exports = { signupController, loginController };
+const getAllUsersController = (req, res) => {
+  try {
+    db.query(`SELECT * FROM users`, (err, result) => {
+      if (err) {
+        return res
+          .status(404)
+          .json({ error: "Users is Not Found Something Wrong" });
+      }
+      return res
+        .status(200)
+        .json({ result: result, message: "All Users Successfully EFetch!" });
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+const userEditController = (req, res) => {
+  try {
+    const { id } = req.params;
+    const fields = Object.keys(req.body)
+      .map((key) => `${key} = '${req.body[key]}'`)
+      .join(", ");
+    db.query(`SELECT id FROM users`, (err, result) => {
+      const idsArray = result.map((row) => row.id);
+      if (idsArray.includes(Number(id))) {
+        db.query(
+          `UPDATE users SET ${fields} WHERE id =${id}`,
+          (err, result) => {
+            if (err) {
+              return res.status(500).json({ error: "DB error occurred" });
+            }
+            return res
+              .status(200)
+              .json({ message: "User Update Successfully!" });
+          }
+        );
+      } else {
+        return res.status(404).json({ error: "User is not found!" });
+      }
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+const userDelectController = (req, res) => {
+  try {
+    const { id } = req.params;
+    db.query(
+      `SELECT id FROM users`,
+      (err, result) => {
+        let existID = result.map((item) => item.id);
+        if (existID.includes(Number(id))) {
+          db.query(` DELETE FROM users WHERE id=${id}`, (err, result) => {
+            if (err) {
+              return res.status(500).json({ error: "DB error occurred" });
+            }
+            if (result) {
+              return res
+                .status(200)
+                .json({ message: "User Successfully Delete" });
+            }
+          });
+        } else {
+          return res.status(404).json({ error: "User is not found!" });
+        }
+      }
+    );
+  } catch (error) {
+    console.log(error);
+    return res.status(500).join({ error: "Internal server error" });
+  }
+};
+
+module.exports = {
+  signupController,
+  loginController,
+  getAllUsersController,
+  userEditController,
+  userDelectController,
+};
