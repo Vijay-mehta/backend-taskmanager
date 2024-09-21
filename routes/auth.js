@@ -5,10 +5,6 @@ const authRout =(app)=>{
     app.get('/api/users',getAllUsersController),
     app.put('/api/useredit/:id',userEditController),
     app.delete('/api/userdelect/:id',userDelectController)
-
-
-
-
 }
 
 module.exports = authRout;
