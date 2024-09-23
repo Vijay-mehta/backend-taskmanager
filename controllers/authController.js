@@ -48,7 +48,6 @@ const signupController = async (req, res) => {
               `SELECT id,name,email,role FROM users WHERE LOWER(email)= LOWER(?)`,
               [email],
               (err, result) => {
-                console.log("resulr333", result);
                 return res
                   .status(200)
                   .json({ result, message: "User Signup successfully!" });
@@ -79,6 +78,9 @@ const loginController = async (req, res) => {
       `SELECT * FROM users WHERE LOWER(email) = LOWER(?)`,
       [email],
       async (err, result) => {
+        console.log("resu", result[0]);
+        const { email, role } = result[0];
+
         if (result.length === 0) {
           return res
             .status(404)
@@ -88,8 +90,8 @@ const loginController = async (req, res) => {
         if (!isPassWord) {
           return res.status(404).json({ message: "Password is incorrect!" });
         }
-        let token = jwt.sign({ user: result }, jwtKey, {
-          expiresIn: "1h",
+        let token = jwt.sign({ email, role }, jwtKey, {
+          expiresIn: "2h",
         });
 
         if (result) {
@@ -107,15 +109,16 @@ const loginController = async (req, res) => {
 
 const getAllUsersController = (req, res) => {
   try {
-    db.query(`SELECT * FROM users`, (err, result) => {
+    db.query(`SELECT id, name, email, role FROM users`, (err, result) => {
       if (err) {
+        console.log(err);
         return res
           .status(404)
           .json({ error: "Users is Not Found Something Wrong" });
       }
       return res
         .status(200)
-        .json({ result: result, message: "All Users Successfully EFetch!" });
+        .json({ result: result, message: "All Users Successfully Fetch!" });
     });
   } catch (error) {
     console.log(error);
@@ -156,29 +159,64 @@ const userEditController = (req, res) => {
 const userDelectController = (req, res) => {
   try {
     const { id } = req.params;
-    db.query(
-      `SELECT id FROM users`,
-      (err, result) => {
-        let existID = result.map((item) => item.id);
-        if (existID.includes(Number(id))) {
-          db.query(` DELETE FROM users WHERE id=${id}`, (err, result) => {
-            if (err) {
-              return res.status(500).json({ error: "DB error occurred" });
-            }
-            if (result) {
-              return res
-                .status(200)
-                .json({ message: "User Successfully Delete" });
-            }
-          });
-        } else {
-          return res.status(404).json({ error: "User is not found!" });
-        }
+    db.query(`SELECT id FROM users`, (err, result) => {
+      let existID = result.map((item) => item.id);
+      if (existID.includes(Number(id))) {
+        db.query(` DELETE FROM users WHERE id=${id}`, (err, result) => {
+          if (err) {
+            return res.status(500).json({ error: "DB error occurred" });
+          }
+          if (result) {
+            return res
+              .status(200)
+              .json({ message: "User Successfully Delete" });
+          }
+        });
+      } else {
+        return res.status(404).json({ error: "User is not found!" });
       }
-    );
+    });
   } catch (error) {
     console.log(error);
     return res.status(500).join({ error: "Internal server error" });
+  }
+};
+
+const permissionController = (req, res) => {
+  try {
+    const { user_id, task_id, can_edit, can_delete } = req.body;
+    console.log(req.body)
+    if (!user_id) {
+      return res
+        .status(404)
+        .json({ error: "Required field user_id is missing" });
+    } else if (!task_id) {
+      return res
+        .status(404)
+        .json({ error: "Required field task_id is missing" });
+    } else if (!can_edit) {
+      return res
+        .status(404)
+        .json({ error: "Required field can_edit is missing" });
+    } else if (!can_delete) {
+      return res
+        .status(404)
+        .json({ error: "Required field can_delete is missing" });
+    }
+
+    db.query(
+      `
+      INSERT INTO permissions (user_id,task_id,can_edit,can_delete) VALUES ('${user_id}','${task_id}','${can_edit}','${can_delete}')`,
+      (err,result) => {
+        if (err) {
+          console.log(err)
+          return res.status(500).json({ error: "DB error occurred" });
+        }
+        return res.status(200).json({ message: "permissions successfully!" });
+      });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
@@ -188,4 +226,5 @@ module.exports = {
   getAllUsersController,
   userEditController,
   userDelectController,
+  permissionController,
 };
