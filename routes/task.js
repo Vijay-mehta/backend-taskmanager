@@ -1,7 +1,8 @@
-const { createTaskController } = require("../controllers/taskController")
+const { createTaskController,getAllTaskController } = require("../controllers/taskController")
 
 const taskRout=(app)=>{
-    app.post('/api/createtask',createTaskController)
+    app.post('/api/createtask',createTaskController),
+    app.get('/api/getalltask/:id',getAllTaskController)
 
 }
 

@@ -66,4 +66,23 @@ const createTaskController = (req, res) => {
   }
 };
 
-module.exports = { createTaskController };
+const getAllTaskController=(req,res)=>{
+  try{
+    console.log(req.params)
+const {id} = req.params;
+db.query(`
+  SELECT * FROM users WHERE id= ${id}`,(err,result)=>{
+    if(err){
+      console.log(err)
+      return res.status(404).json({error:"BD Erroe"})
+    }
+    return res.status(200).json({result:result,message:"All Task Data Fetach Successfully!"})
+  })
+
+  }catch(error){
+    console.log(error)
+    return res.status(500).json({error:"Server internal error"})
+  }
+
+}
+module.exports = { createTaskController ,getAllTaskController};
