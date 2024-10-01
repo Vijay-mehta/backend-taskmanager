@@ -43,6 +43,8 @@ const createTaskController = (req, res) => {
   VALUES ('${title}', '${description}', '${due_date}', '${priority}', '${location_reminder}', '${assigned_to}','${created_by}')
 `,
       (err, result) => {
+        console.log("updateresu",result)
+
         if (err) {
           console.log(err);
           return res.status(404).json({ error: "DB error" });
@@ -50,9 +52,11 @@ const createTaskController = (req, res) => {
         if (result) {
           db.query(
             `
-        SELECT * FROM tasks`,
+        SELECT * FROM tasks WHERE id='${result.insertId}'`,
             (err, result) => {
+              console.log("resu888",result)
               return res
+
                 .status(200)
                 .json({ message: "Task added successfully!", result });
             }
@@ -66,23 +70,33 @@ const createTaskController = (req, res) => {
   }
 };
 
-const getAllTaskController=(req,res)=>{
-  try{
-    console.log(req.params)
-const {id} = req.params;
-db.query(`
-  SELECT * FROM users WHERE id= ${id}`,(err,result)=>{
-    if(err){
-      console.log(err)
-      return res.status(404).json({error:"BD Erroe"})
-    }
-    return res.status(200).json({result:result,message:"All Task Data Fetach Successfully!"})
-  })
-
-  }catch(error){
-    console.log(error)
-    return res.status(500).json({error:"Server internal error"})
+const getAllTaskController = (req, res) => {
+  try {
+    const { id } = req.params;
+    db.query(`SELECT created_by FROM tasks`,(err,result)=>{
+      existId = result.map((itme)=>itme.created_by);
+     if(existId.includes(Number(id))){
+      db.query(
+        `SELECT * FROM TASKS WHERE created_by = ${Number(id)}`,
+        (err, result) => {
+          if (err) {
+            return res.status(404).json({ error: `DB error ${err}` });
+          }
+          return res
+            .status(200)
+            .json({ result, message: "All Task Fetch Successfully!" });
+        }
+      );
+     }else{
+      return res
+      .status(404)
+      .json({  error: "User is Not Found!" });
+     }
+    })
+   
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ error: "Server internal error" });
   }
-
-}
-module.exports = { createTaskController ,getAllTaskController};
+};
+module.exports = { createTaskController, getAllTaskController };

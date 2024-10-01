@@ -22,7 +22,7 @@ const signupController = async (req, res) => {
     let saltRounds = 10;
     let hashpassword = await bcrypt.hash(password, saltRounds);
     db.query(
-      `SELECT * FROM users WHERE LOWER(email) = LOWER(?)`,
+      `SELECT * FROM users WHERE email = '${email}'`,
       [email],
       (err, result) => {
         if (err) {
@@ -32,25 +32,26 @@ const signupController = async (req, res) => {
           return res.status(409).json({ message: "user already exist" });
         }
 
-        const query = role
-          ? `INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)`
-          : `INSERT INTO users (name, email, password) VALUES (?, ?, ?)`;
-
-        const values = role
-          ? [name, email, hashpassword, role]
-          : [name, email, hashpassword];
-        db.query(query, values, (err, result) => {
-          if (err) {
+        const query = role ? `INSERT INTO users (name, email, password, role) VALUES ('${name}', '${email}', '${hashpassword}', '${role}')`
+        : `INSERT INTO users (name, email, password) VALUES ('${name}', '${email}', '${hashpassword}')`;
+      
+      db.query(query, (err, result) => {
+        if (err) {
+            console.log("err",err)
             return res.status(404).json({ error: `${err}` });
           }
           if (result) {
             db.query(
-              `SELECT id,name,email,role FROM users WHERE LOWER(email)= LOWER(?)`,
-              [email],
+              `SELECT id,name,email,role FROM users WHERE email ='${email}' `,
               (err, result) => {
+                if(err){
+                  return res
+                  .status()
+                  .json({ error:`${err}` });
+                }
                 return res
                   .status(200)
-                  .json({ result, message: "User Signup successfully!" });
+                  .json({ result:result, message: "User Signup successfully!" });
               }
             );
           }
@@ -75,10 +76,8 @@ const loginController = async (req, res) => {
     }
 
     db.query(
-      `SELECT * FROM users WHERE LOWER(email) = LOWER(?)`,
-      [email],
+      `SELECT * FROM users WHERE email = '${email}'`,
       async (err, result) => {
-        console.log("resu", result[0]);
         const { email, role } = result[0];
 
         if (result.length === 0) {
